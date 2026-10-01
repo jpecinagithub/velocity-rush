@@ -8,6 +8,18 @@ import { GameSession } from '../src/game/session.js';
 import { CARS } from '../src/data/cars.js';
 import { TRACKS } from '../src/data/tracks.js';
 import { DIFFICULTIES, QUALITY } from '../src/game/constants.js';
+import { loadBests, saveBest, loadUnlocks, unlockApexOne, loadSettings, saveSettings } from '../src/data/settings.js';
+
+// localStorage shim for node
+{
+  const store = new Map();
+  globalThis.localStorage = {
+    getItem: (k) => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => store.set(k, String(v)),
+    removeItem: (k) => store.delete(k),
+    clear: () => store.clear(),
+  };
+}
 
 let pass = 0, fail = 0;
 function ok(name, cond, extra = '') {
@@ -135,6 +147,26 @@ console.log('== sprint (azure) ==');
   const target = sess.track.sprintFinishS;
   ok('sprint ends at the finish arch', Math.abs(sess.player.raceS - target) < 300, `raceS=${Math.round(sess.player.raceS)} target=${target}`);
   sess.dispose();
+}
+
+// ---- persistence (settings, best times, unlocks) ----
+{
+  localStorage.clear();
+  ok('settings defaults', loadSettings().steerSensitivity === 70);
+  saveSettings({ ...loadSettings(), steerSensitivity: 42 });
+  ok('settings persist', loadSettings().steerSensitivity === 42);
+  ok('no bests initially', Object.keys(loadBests()).length === 0);
+  ok('saveBest first time', saveBest('azure', 'timeattack', 95234) === true);
+  ok('best persists', loadBests()['azure:timeattack'] === 95234);
+  ok('worse time rejected', saveBest('azure', 'timeattack', 99000) === false);
+  ok('best unchanged after worse', loadBests()['azure:timeattack'] === 95234);
+  ok('better time accepted', saveBest('azure', 'timeattack', 90100) === true);
+  ok('best updated', loadBests()['azure:timeattack'] === 90100);
+  ok('modes keyed separately', saveBest('azure', 'circuit', 120000) === true
+    && loadBests()['azure:timeattack'] === 90100 && loadBests()['azure:circuit'] === 120000);
+  ok('apex locked initially', loadUnlocks().apexone === false);
+  ok('unlockApexOne', unlockApexOne() === true && loadUnlocks().apexone === true);
+  ok('unlock idempotent', unlockApexOne() === false);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
