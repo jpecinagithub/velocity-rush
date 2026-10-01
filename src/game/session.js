@@ -331,7 +331,7 @@ export class GameSession {
     this.audio.skid(p.drift * (p.airT > 0 ? 0 : 1));
     this.audio.wind(spd01);
     const s = this.getSettings ? this.getSettings() : {};
-    this.audio.pulse(s.music !== false, 0.6);
+    this.audio.music(s.music !== false);
 
     // --- camera / hud ---
     if (this.chase) this.chase.update(dt, p, { shake: s.cameraShake || 'low' });
@@ -550,7 +550,7 @@ export class GameSession {
       mode: this.mode.id,
     };
     this.audio.fanfare(pos === 1);
-    this.audio.pulse(false);
+    this.audio.music(false);
     if (this.chase) this.chase.addTrauma(0.25);
   }
 

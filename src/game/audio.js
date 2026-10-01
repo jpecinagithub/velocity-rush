@@ -1,39 +1,66 @@
 // Fully synthesized audio: engine, skid, wind, nitro, collisions, UI.
 // No audio files, no network. All nodes are created lazily on first user gesture.
+
+// Race-music progression: Am - F - C - G (8 sixteenth-steps per chord, 32-step loop).
+const MUS_CHORDS = [
+  { bass: 55.00, tones: [220.00, 261.63, 329.63] }, // Am
+  { bass: 43.65, tones: [174.61, 220.00, 261.63] }, // F
+  { bass: 65.41, tones: [261.63, 329.63, 392.00] }, // C
+  { bass: 49.00, tones: [196.00, 246.94, 293.66] }, // G
+];
+
 export class AudioManager {
   constructor() {
     this.ctx = null;
     this.master = null;
+    this.sfx = null;      // engine, skid, wind, UI one-shots
+    this.musicBus = null; // sequenced race music (independent toggle)
     this.muted = false;
     this._eng = null;
     this._skid = null;
     this._wind = null;
-    this._pulse = null;
     this._noiseBuf = null;
     this._lastRpm = 0;
+    // music sequencer state
+    this._seqTimer = null;
+    this._seqStep = 0;
+    this._seqNextT = 0;
   }
   ensure() {
     if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {}); return true; }
     try {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return false;
-      this.ctx = new AC();
-      this.master = this.ctx.createGain();
-      this.master.gain.value = this.muted ? 0 : 0.9;
-      this.master.connect(this.ctx.destination);
-      const len = this.ctx.sampleRate;
-      this._noiseBuf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
-      const d = this._noiseBuf.getChannelData(0);
-      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-      this._buildEngine();
-      this._buildSkid();
-      this._buildWind();
+      this._initGraph(new AC());
+      // a fresh context starts suspended; try to run immediately (works when
+      // created from a user gesture, otherwise a later gesture resumes it)
+      this.ctx.resume().catch(() => {});
     } catch { this.ctx = null; return false; }
     return !!this.ctx;
   }
+  // Build the gain graph on a context (also usable with OfflineAudioContext).
+  _initGraph(ctx) {
+    this.ctx = ctx;
+    this.master = ctx.createGain();
+    this.master.gain.value = 0.9;
+    this.master.connect(ctx.destination);
+    this.sfx = ctx.createGain();
+    this.sfx.gain.value = this.muted ? 0 : 1;
+    this.sfx.connect(this.master);
+    this.musicBus = ctx.createGain();
+    this.musicBus.gain.value = 0.8;
+    this.musicBus.connect(this.master);
+    const len = ctx.sampleRate;
+    this._noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = this._noiseBuf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    this._buildEngine();
+    this._buildSkid();
+    this._buildWind();
+  }
   setMuted(m) {
     this.muted = m;
-    if (this.master) this.master.gain.value = m ? 0 : 0.9;
+    if (this.sfx) this.sfx.gain.setTargetAtTime(m ? 0 : 1, this.ctx.currentTime, 0.03);
   }
   _buildEngine() {
     const c = this.ctx;
@@ -42,7 +69,7 @@ export class AudioManager {
     const g2 = c.createGain(); g2.gain.value = 0.35;
     const filt = c.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = 750; filt.Q.value = 2;
     const g = c.createGain(); g.gain.value = 0;
-    o1.connect(filt); o2.connect(g2); g2.connect(filt); filt.connect(g); g.connect(this.master);
+    o1.connect(filt); o2.connect(g2); g2.connect(filt); filt.connect(g); g.connect(this.sfx);
     o1.start(); o2.start();
     this._eng = { o1, o2, filt, g };
   }
@@ -56,7 +83,7 @@ export class AudioManager {
     const s = this._noiseSrc();
     const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 1.2;
     const g = c.createGain(); g.gain.value = 0;
-    s.connect(f); f.connect(g); g.connect(this.master); s.start();
+    s.connect(f); f.connect(g); g.connect(this.sfx); s.start();
     this._skid = { g };
   }
   _buildWind() {
@@ -64,7 +91,7 @@ export class AudioManager {
     const s = this._noiseSrc();
     const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 500;
     const g = c.createGain(); g.gain.value = 0;
-    s.connect(f); f.connect(g); g.connect(this.master); s.start();
+    s.connect(f); f.connect(g); g.connect(this.sfx); s.start();
     this._wind = { g, f };
   }
   // --- per-frame vehicle audio. rpm01 0..1, throttle 0..1 ---
@@ -91,27 +118,76 @@ export class AudioManager {
     this._wind.g.gain.setTargetAtTime(speed01 * speed01 * 0.22, t, 0.1);
     this._wind.f.frequency.setTargetAtTime(400 + speed01 * 1600, t, 0.1);
   }
-  // subtle synth pulse during races (toggleable as "music")
-  pulse(on, intensity = 0.5) {
+  // --- synthesized race music: 132 BPM driving synth loop, 100% original ---
+  // 32-step loop (2 bars), Am - F - C - G. Lookahead scheduler, idempotent on/off.
+  music(on) {
+    on = !!on;
     if (!this.ctx) return;
-    const t = this.ctx.currentTime;
-    if (on && !this._pulse) {
-      const o = this.ctx.createOscillator(); o.type = 'sine'; o.frequency.value = 55;
-      const g = this.ctx.createGain(); g.gain.value = 0;
-      const lfo = this.ctx.createOscillator(); lfo.type = 'square'; lfo.frequency.value = 2.2;
-      const lg = this.ctx.createGain(); lg.gain.value = 0.5;
-      lfo.connect(lg); lg.connect(g.gain);
-      o.connect(g); g.connect(this.master);
-      o.start(); lfo.start();
-      this._pulse = { o, lfo, g, base: 0.05 * intensity };
-      g.gain.value = 0.05 * intensity;
-    } else if (!on && this._pulse) {
-      const p = this._pulse; this._pulse = null;
-      p.g.gain.setTargetAtTime(0, t, 0.2);
-      setTimeout(() => { try { p.o.stop(); p.lfo.stop(); } catch {} }, 600);
-    } else if (on && this._pulse) {
-      this._pulse.g.gain.setTargetAtTime(0.05 * intensity, t, 0.3);
+    if (on && !this._seqTimer) {
+      this._seqStep = 0;
+      this._seqNextT = this.ctx.currentTime + 0.08;
+      this._seqTimer = setInterval(() => this._scheduleMusic(), 90);
+    } else if (!on && this._seqTimer) {
+      clearInterval(this._seqTimer);
+      this._seqTimer = null;
     }
+  }
+  _scheduleMusic() {
+    if (!this.ctx || !this._seqTimer) return;
+    const stepDur = 60 / 132 / 4;
+    try {
+      while (this._seqNextT < this.ctx.currentTime + 0.28) {
+        this._playMusicStep(this._seqStep, this._seqNextT, stepDur);
+        this._seqNextT += stepDur;
+        this._seqStep = (this._seqStep + 1) % 32;
+      }
+    } catch { /* ignore scheduling hiccups */ }
+  }
+  _playMusicStep(step, t, stepDur) {
+    const chord = MUS_CHORDS[(step >> 3) % 4]; // 8 steps per chord
+    if (step % 4 === 0) this._musKick(t);
+    if (step === 8 || step === 24) this._musNoise(t, 0.14, 0.20, 'bandpass', 1800); // snare
+    if (step % 4 === 2) this._musNoise(t, 0.045, 0.06, 'highpass', 7500); // hat
+    if (step % 2 === 0) {
+      const up = step % 8 === 6; // octave pop on the driving 8ths
+      this._musTone(chord.bass * (up ? 2 : 1), t, 0.17, 'sawtooth', 0.17, 340); // bass
+      const oct = step >= 16 ? 2 : 1; // second bar lifts an octave
+      const tone = chord.tones[(step >> 1) % 3] * oct;
+      this._musTone(tone, t, stepDur * 1.9, 'triangle', 0.055, 0); // lead arp
+    }
+  }
+  _musTone(freq, t, dur, type, vol, lp) {
+    const c = this.ctx;
+    const o = c.createOscillator(); o.type = type; o.frequency.value = freq;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    let out = o;
+    if (lp) { const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lp; o.connect(f); out = f; }
+    out.connect(g); g.connect(this.musicBus);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+  _musNoise(t, dur, vol, type, freq) {
+    const c = this.ctx;
+    const s = c.createBufferSource(); s.buffer = this._noiseBuf; s.loop = true;
+    const f = c.createBiquadFilter(); f.type = type; f.frequency.value = freq;
+    const g = c.createGain();
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    s.connect(f); f.connect(g); g.connect(this.musicBus);
+    s.start(t); s.stop(t + dur + 0.05);
+  }
+  _musKick(t) {
+    const c = this.ctx;
+    const o = c.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(150, t);
+    o.frequency.exponentialRampToValueAtTime(42, t + 0.1);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.5, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+    o.connect(g); g.connect(this.musicBus);
+    o.start(t); o.stop(t + 0.2);
   }
   // --- one shots ---
   _tone(freq, dur, type = 'sine', vol = 0.25, when = 0, slideTo = null) {
@@ -124,7 +200,7 @@ export class AudioManager {
       g.gain.setValueAtTime(0, t);
       g.gain.linearRampToValueAtTime(vol, t + 0.012);
       g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-      o.connect(g); g.connect(this.master);
+      o.connect(g); g.connect(this.sfx);
       o.start(t); o.stop(t + dur + 0.05);
     } catch { /* ignore */ }
   }
@@ -137,7 +213,7 @@ export class AudioManager {
       const g = c.createGain();
       g.gain.setValueAtTime(vol, t);
       g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-      s.connect(f); f.connect(g); g.connect(this.master);
+      s.connect(f); f.connect(g); g.connect(this.sfx);
       s.start(t); s.stop(t + dur + 0.05);
     } catch { /* ignore */ }
   }
@@ -160,5 +236,5 @@ export class AudioManager {
     const seq = win ? [523, 659, 784, 1047] : [392, 494, 587];
     seq.forEach((f, i) => this._tone(f, 0.34, 'triangle', 0.22, i * 0.16));
   }
-  suspend() { this.engine(0, 0, false, false); this.skid(0); this.wind(0); this.pulse(false); }
+  suspend() { this.engine(0, 0, false, false); this.skid(0); this.wind(0); this.music(false); }
 }
