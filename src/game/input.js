@@ -136,7 +136,9 @@ export class InputSystem {
     const k = this._keys;
     const kbLeft = k.has('ArrowLeft') || k.has('KeyA');
     const kbRight = k.has('ArrowRight') || k.has('KeyD');
-    const kbTarget = (kbRight ? 1 : 0) - (kbLeft ? 1 : 0);
+    // NOTE: positive physics steer turns toward world +X, which the chase
+    // camera shows as screen-LEFT, so human input is negated here.
+    const kbTarget = (kbLeft ? 1 : 0) - (kbRight ? 1 : 0);
     const rate = SMOOTH_RATE[s.steerSmoothing] ?? SMOOTH_RATE.medium;
     this._kbSteer += clamp(kbTarget - this._kbSteer, -rate * dt, rate * dt);
     const kbSteer = clamp(this._kbSteer * sens, -1, 1);
@@ -151,7 +153,7 @@ export class InputSystem {
     const p = this._pad();
     if (p) {
       const m = this.mapping;
-      gSteer = clamp(this._dz(this._axis(p, m.steerAxis), dz) * sens, -1, 1);
+      gSteer = clamp(-this._dz(this._axis(p, m.steerAxis), dz) * sens, -1, 1);
       gAccel = clamp(this._btn(p, m.accelBtn), 0, 1);
       // some pads expose triggers as buttons 6/7, others as axes; value path covers both
       gBrake = clamp(this._btn(p, m.brakeBtn), 0, 1);

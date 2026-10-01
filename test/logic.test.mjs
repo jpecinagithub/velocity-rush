@@ -149,6 +149,26 @@ console.log('== sprint (azure) ==');
   sess.dispose();
 }
 
+// ---- steering sign: stick/Arrow RIGHT must produce negative steer
+// (positive physics steer turns toward world +X = screen-LEFT for the chase cam)
+{
+  const pad = { index: 0, id: 'TestPad', connected: true, axes: [1, 0], buttons: [] };
+  Object.defineProperty(globalThis, 'navigator', { value: { getGamepads: () => [pad] }, configurable: true });
+  const inp = new InputSystem(() => ({ steerSensitivity: 70, deadzone: 0 }));
+  inp._padEvent({ gamepad: pad }, true);
+  inp.update(0.016);
+  ok('stick right steers screen-right', inp.steer < -0.5, `steer=${inp.steer.toFixed(2)}`);
+  const kbr = new InputSystem(() => ({ steerSensitivity: 70, deadzone: 0 }));
+  kbr._keys.add('ArrowRight');
+  for (let i = 0; i < 30; i++) kbr.update(0.016);
+  ok('ArrowRight steers screen-right', kbr.steer < -0.5, `steer=${kbr.steer.toFixed(2)}`);
+  const kbl = new InputSystem(() => ({ steerSensitivity: 70, deadzone: 0 }));
+  kbl._keys.add('ArrowLeft');
+  for (let i = 0; i < 30; i++) kbl.update(0.016);
+  ok('ArrowLeft steers screen-left', kbl.steer > 0.5, `steer=${kbl.steer.toFixed(2)}`);
+  delete globalThis.navigator;
+}
+
 // ---- persistence (settings, best times, unlocks) ----
 {
   localStorage.clear();
