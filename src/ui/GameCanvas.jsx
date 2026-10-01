@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { GameSession } from '../game/session.js';
 import { InputSystem } from '../game/input.js';
 import { getCar, CARS } from '../data/cars.js';
@@ -26,6 +27,26 @@ function pickAiCars(playerId) {
   const out = [];
   for (let i = 0; i < 5; i++) out.push(pool[i % pool.length]);
   return out;
+}
+
+// Image-based lighting for the whole scene: makes car paint clearcoat,
+// chrome and rims read as real metal instead of flat gray. Generated
+// locally with RoomEnvironment — no network fetch.
+function SceneEnvironment() {
+  const scene = useThree((s) => s.scene);
+  const gl = useThree((s) => s.gl);
+  useEffect(() => {
+    const pmrem = new THREE.PMREMGenerator(gl);
+    const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environment = env;
+    scene.environmentIntensity = 0.55;
+    return () => {
+      scene.environment = null;
+      env.dispose();
+      pmrem.dispose();
+    };
+  }, [scene, gl]);
+  return null;
 }
 
 function SessionBridge({ setup, settingsRef, cbs, quality, autoQuality }) {
@@ -145,6 +166,7 @@ export default function GameCanvas({ setup, settingsRef, cbs }) {
         }}
         style={{ position: 'absolute', inset: 0 }}
       >
+        <SceneEnvironment />
         <SessionBridge
           setup={setup}
           settingsRef={settingsRef}
