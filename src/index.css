@@ -264,6 +264,26 @@ h3 { font-family: var(--font-d); letter-spacing: 1.5px; font-size: 15px; color: 
 }
 .badge-newbest { color: #06222a; background: linear-gradient(135deg, var(--gold), #ff9d2e); font-weight: 700; }
 .badge-unlock { color: var(--gold); border: 1px solid var(--gold); box-shadow: 0 0 18px rgba(255, 194, 51, 0.25); }
+.record-entry { display: flex; flex-direction: column; gap: 8px; align-items: stretch; text-align: center; }
+.record-entry-title { font-family: var(--font-d); font-size: 18px; letter-spacing: 2px; color: var(--gold); text-shadow: 0 0 18px rgba(255, 194, 51, 0.5); }
+.record-entry-sub { color: var(--dim); font-size: 13px; letter-spacing: 1px; }
+.record-entry-sub b { color: #fff; font-family: var(--font-d); }
+.nick-input {
+  background: #0b0f16; border: 1px solid var(--gold); border-radius: 8px; color: #fff;
+  font-family: var(--font-d); font-size: 20px; letter-spacing: 3px; text-align: center;
+  padding: 10px; text-transform: uppercase; outline: none;
+}
+.nick-input:focus { box-shadow: 0 0 16px rgba(255, 194, 51, 0.35); }
+.records-table { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+.records-title { text-align: center; font-family: var(--font-d); font-size: 13px; letter-spacing: 2px; color: var(--dim); margin-bottom: 4px; }
+.record-row { display: grid; grid-template-columns: 28px 1fr auto; grid-template-rows: auto auto; padding: 6px 8px; border-radius: 6px; font-size: 13px; column-gap: 8px; }
+.record-row:nth-child(odd) { background: rgba(255, 255, 255, 0.03); }
+.record-row.hl { background: rgba(255, 194, 51, 0.14); border: 1px solid var(--gold); }
+.record-pos { font-family: var(--font-d); color: var(--dim); grid-row: span 2; align-self: center; }
+.record-name { font-weight: 700; letter-spacing: 1px; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.record-time { font-family: var(--font-d); color: var(--gold); text-align: right; }
+.record-car { color: var(--dim); font-size: 11px; letter-spacing: 1px; grid-column: 2 / 4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.records-empty { text-align: center; color: var(--dim); font-size: 13px; letter-spacing: 1px; }
 
 #fatal {
   position: fixed; inset: 0; z-index: 9999;

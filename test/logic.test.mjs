@@ -8,7 +8,8 @@ import { GameSession } from '../src/game/session.js';
 import { CARS } from '../src/data/cars.js';
 import { TRACKS } from '../src/data/tracks.js';
 import { DIFFICULTIES, QUALITY } from '../src/game/constants.js';
-import { loadBests, saveBest, loadUnlocks, unlockApexOne, loadSettings, saveSettings } from '../src/data/settings.js';
+import { loadBests, saveBest, loadUnlocks, unlockApexOne, loadSettings, saveSettings,
+  loadRecords, qualifiesForRecords, saveRecord, loadPilotName, savePilotName, MAX_RECORDS } from '../src/data/settings.js';
 
 // localStorage shim for node
 {
@@ -182,11 +183,46 @@ console.log('== sprint (azure) ==');
   ok('best unchanged after worse', loadBests()['azure:timeattack'] === 95234);
   ok('better time accepted', saveBest('azure', 'timeattack', 90100) === true);
   ok('best updated', loadBests()['azure:timeattack'] === 90100);
-  ok('modes keyed separately', saveBest('azure', 'circuit', 120000) === true
-    && loadBests()['azure:timeattack'] === 90100 && loadBests()['azure:circuit'] === 120000);
+  // circuit moved 3 -> 2 laps: stale 3-lap circuit bests are purged on load
+  localStorage.setItem('velocity-rush:bests:v1', JSON.stringify({ 'azure:timeattack': 90100, 'azure:circuit': 150000 }));
+  ok('stale 3-lap circuit best purged', loadBests()['azure:circuit'] === undefined);
+  ok('timeattack best survives purge', loadBests()['azure:timeattack'] === 90100);
   ok('apex locked initially', loadUnlocks().apexone === false);
   ok('unlockApexOne', unlockApexOne() === true && loadUnlocks().apexone === true);
   ok('unlock idempotent', unlockApexOne() === false);
+}
+
+// ---- circuit records with pilot nicknames (top 10 per track) ----
+{
+  localStorage.clear();
+  ok('no records initially', loadRecords('azure').length === 0);
+  ok('qualifies when empty', qualifiesForRecords('azure', 120000) === true);
+  ok('rejects invalid time', qualifiesForRecords('azure', 0) === false && qualifiesForRecords('azure', NaN) === false);
+  ok('saveRecord rank 0', saveRecord('azure', { name: 'JON', ms: 120000, carId: 'volt', difficulty: 'normal' }) === 0);
+  ok('record persisted', loadRecords('azure')[0].name === 'JON' && loadRecords('azure')[0].ms === 120000);
+  ok('slower time ranks after', saveRecord('azure', { name: 'CPU', ms: 130000, carId: 'volt', difficulty: 'easy' }) === 1);
+  ok('faster time takes rank 0', saveRecord('azure', { name: 'PRO', ms: 110000, carId: 'volt', difficulty: 'hard' }) === 0);
+  ok('records sorted asc', loadRecords('azure').map((r) => r.ms).join(',') === '110000,120000,130000');
+  ok('nickname trimmed to 12', saveRecord('azure', { name: '  ABCDEFGHIJKLMN  ', ms: 115000 }) === 1
+    && loadRecords('azure')[1].name === 'ABCDEFGHIJKL');
+  ok('empty nickname defaults to PILOTO', saveRecord('azure', { name: '   ', ms: 116000 }) === 2
+    && loadRecords('azure')[2].name === 'PILOTO');
+  // fill to the cap, then check trimming and qualification
+  for (let i = 0; i < MAX_RECORDS; i++) saveRecord('ridge', { name: 'P' + i, ms: 100000 + i * 1000 });
+  ok('records capped at 10', loadRecords('ridge').length === MAX_RECORDS);
+  ok('slowest trimmed', loadRecords('ridge')[MAX_RECORDS - 1].ms === 109000);
+  ok('slower than slowest rejected', qualifiesForRecords('ridge', 200000) === false);
+  ok('faster than slowest qualifies', qualifiesForRecords('ridge', 107500) === true);
+  ok('saveRecord returns -1 when cut', saveRecord('ridge', { name: 'SLOW', ms: 200000 }) === -1);
+  ok('mid-pack insert keeps cap', saveRecord('ridge', { name: 'MID', ms: 104500 }) === 5 && loadRecords('ridge').length === MAX_RECORDS);
+  // per-track isolation
+  ok('tracks isolated', loadRecords('azure').length === 5 && loadRecords('neon').length === 0);
+  // pilot nickname persistence
+  ok('no pilot initially', loadPilotName() === '');
+  savePilotName('JON');
+  ok('pilot persists', loadPilotName() === 'JON');
+  savePilotName('TOOLONGNICKNAME');
+  ok('pilot trimmed to 12', loadPilotName() === 'TOOLONGNICKN');
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

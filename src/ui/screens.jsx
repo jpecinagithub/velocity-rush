@@ -5,6 +5,7 @@ import { TRACKS } from '../data/tracks.js';
 import { MODES, DIFFICULTIES } from '../game/constants.js';
 import { getInput } from './inputSingleton.js';
 import { useMenuNav } from './useMenuNav.js';
+import { loadRecords, qualifiesForRecords, saveRecord, loadPilotName, savePilotName } from '../data/settings.js';
 
 export function fmtMs(ms) {
   if (ms == null) return '—';
@@ -149,7 +150,7 @@ export function SetupFlow({ unlocked, bests, settings, onSettings, onBack, onSta
                 <button key={m.id} className={`card${mode === m.id ? ' selected' : ''}${focus === i ? ' focused' : ''}`}
                   onClick={() => { setMode(m.id); }} onMouseEnter={() => setFocus(i)} onDoubleClick={next}>
                   <div className="card-title">{MODE_ES[m.id]}</div>
-                  <div className="card-desc">{m.id === 'circuit' ? 'Carrera clásica: 3 vueltas contra 5 rivales.' : m.id === 'sprint' ? 'De punto a punto entre tráfico denso.' : 'Tú contra el crono: 3 vueltas, tu mejor vuelta se guarda.'}</div>
+                  <div className="card-desc">{m.id === 'circuit' ? 'Carrera clásica: 2 vueltas contra 5 rivales.' : m.id === 'sprint' ? 'De punto a punto entre tráfico denso.' : 'Tú contra el crono: 3 vueltas, tu mejor vuelta se guarda.'}</div>
                   <div className="card-meta">{m.id === 'timeattack' ? 'En solitario' : '6 pilotos'}</div>
                 </button>
               ))}
@@ -409,7 +410,7 @@ export function HelpScreen({ onBack }) {
         </div>
         <div className="help">
           <h3>Objetivo</h3>
-          <p>Circuito: completa 3 vueltas y cruza primero. Sprint: llega a la meta antes que tus 5 rivales esquivando tráfico. Contrarreloj: marca tu mejor vuelta.</p>
+          <p>Circuito: completa 2 vueltas y cruza primero. Sprint: llega a la meta antes que tus 5 rivales esquivando tráfico. Contrarreloj: marca tu mejor vuelta.</p>
           <h3>Nitro</h3>
           <p>El nitro se recarga solo: adelanta rivales, pégate a su rebufo, roza el tráfico sin tocarlo (near miss), pasa por checkpoints, salta y conduce limpio a alta velocidad. Pulsa Shift o ✕ para quemarlo.</p>
           <h3>Rebufo</h3>
@@ -473,13 +474,46 @@ export function ResultsScreen({ results, setup, meta, onRetry, onSetup, onMenu }
   if (!results) return null;
   const car = CARS.find((c) => c.id === setup.carId);
   const track = TRACKS.find((t) => t.id === setup.trackId);
-  const items = [
-    { label: 'REINTENTAR', go: onRetry },
-    { label: 'CAMBIAR MODO / COCHE', go: onSetup },
-    { label: 'MENÚ PRINCIPAL', go: onMenu },
-  ];
-  const [focus, set] = useMenuNav(items.length, (i) => items[i].go());
+  const isCircuit = setup.mode === 'circuit';
+  const inputRef = useRef(null);
+  // Circuit: if the total time makes the track's top 10, ask for the pilot's nickname first.
+  const [phase, setPhase] = useState(() =>
+    (isCircuit && results.timeMs != null && qualifiesForRecords(setup.trackId, results.timeMs)) ? 'entry' : 'done');
+  const [nick, setNick] = useState(() => loadPilotName() || 'PILOTO');
+  const [typing, setTyping] = useState(false);
+  const [savedRank, setSavedRank] = useState(-1);
+  const [records, setRecords] = useState(() => (isCircuit ? loadRecords(setup.trackId) : []));
+
+  const doSave = () => {
+    const rank = saveRecord(setup.trackId, {
+      name: nick, ms: results.timeMs, carId: setup.carId, difficulty: setup.difficulty,
+    });
+    savePilotName(nick);
+    setRecords(loadRecords(setup.trackId));
+    setSavedRank(rank);
+    inputRef.current?.blur();
+    setPhase('done');
+  };
+
+  const items = phase === 'entry'
+    ? [
+        { label: 'GUARDAR RÉCORD', go: doSave },
+        { label: 'OMITIR', go: () => setPhase('done') },
+      ]
+    : [
+        { label: 'REINTENTAR', go: onRetry },
+        { label: 'CAMBIAR MODO / COCHE', go: onSetup },
+        { label: 'MENÚ PRINCIPAL', go: onMenu },
+      ];
+  // While the nickname field has focus, gamepad/arrow menu navigation is disabled so typing works.
+  const [focus, set] = useMenuNav(items.length, (i) => items[i].go(), { enabled: !typing });
   const pos = results.position;
+
+  const recordCar = (r) => {
+    const c = CARS.find((x) => x.id === r.carId);
+    return c ? c.name : '—';
+  };
+
   return (
     <div className="overlay">
       <div className="results-box">
@@ -488,6 +522,27 @@ export function ResultsScreen({ results, setup, meta, onRetry, onSetup, onMenu }
         <div className="results-sub">{MODE_ES[setup.mode]} · {track.name} · {car.name}</div>
         {meta?.newBest && <div className="badge-newbest">★ NUEVO RÉCORD ★</div>}
         {meta?.unlockedNow && <div className="badge-unlock">APEX ONE DESBLOQUEADO EN TU GARAJE</div>}
+        {phase === 'entry' && (
+          <div className="record-entry">
+            <div className="record-entry-title">¡ENTRAS EN EL TOP 10 DEL CIRCUITO!</div>
+            <div className="record-entry-sub">Tu tiempo: <b>{fmtMs(results.timeMs)}</b> — escribe el nickname del piloto</div>
+            <input
+              ref={inputRef}
+              className="nick-input"
+              value={nick}
+              maxLength={12}
+              autoComplete="off"
+              spellCheck={false}
+              onChange={(e) => setNick(e.target.value)}
+              onFocus={() => setTyping(true)}
+              onBlur={() => setTyping(false)}
+              onKeyDown={(e) => { if (e.key === 'Enter') doSave(); }}
+            />
+            {items.map((it, i) => (
+              <MenuButton key={it.label} label={it.label} focused={focus === i} onClick={it.go} onHover={() => set(i)} />
+            ))}
+          </div>
+        )}
         <div className="results-rows">
           {results.timeMs != null && <div><span>Tiempo total</span><b>{fmtMs(results.timeMs)}</b></div>}
           <div><span>Mejor vuelta</span><b>{fmtMs(results.bestLapMs)}</b></div>
@@ -496,7 +551,23 @@ export function ResultsScreen({ results, setup, meta, onRetry, onSetup, onMenu }
           <div><span>Near miss</span><b>{results.nearMisses} (+{results.nearScore} pts)</b></div>
           <div><span>Nitro usado</span><b>{results.nitroUsed.toFixed(1)} s</b></div>
         </div>
-        {items.map((it, i) => (
+        {isCircuit && records.length > 0 && (
+          <div className="records-table">
+            <div className="records-title">MEJORES TIEMPOS · {track.name}</div>
+            {records.map((r, i) => (
+              <div key={i} className={`record-row${i === savedRank ? ' hl' : ''}`}>
+                <span className="record-pos">{i + 1}.</span>
+                <span className="record-name">{r.name}</span>
+                <span className="record-time">{fmtMs(r.ms)}</span>
+                <span className="record-car">{recordCar(r)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {isCircuit && records.length === 0 && phase === 'done' && (
+          <div className="records-empty">Aún no hay tiempos registrados en este circuito.</div>
+        )}
+        {phase === 'done' && items.map((it, i) => (
           <MenuButton key={it.label} label={it.label} focused={focus === i} onClick={it.go} onHover={() => set(i)} />
         ))}
       </div>

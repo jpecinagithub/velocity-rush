@@ -60,6 +60,10 @@ export class InputSystem {
 
   _key(e, down) {
     const c = e.code;
+    // Typing in a text field (e.g. the pilot nickname) must not drive the game
+    // nor swallow keys: let the field handle them and ignore them here.
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
     const handled = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','KeyW','KeyA','KeyS','KeyD','KeyR','KeyC','KeyP','Enter','Escape','ShiftLeft','ShiftRight'];
     if (handled.includes(c)) e.preventDefault();
     if (down && !this._keys.has(c)) this._edgeFromKey(c);

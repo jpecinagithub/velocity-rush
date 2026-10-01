@@ -3,8 +3,8 @@ export const MODES = {
   circuit: {
     id: 'circuit',
     name: 'CIRCUIT',
-    desc: 'Classic wheel-to-wheel racing. 3 laps, 5 AI rivals, checkpoints.',
-    laps: 3,
+    desc: 'Classic wheel-to-wheel racing. 2 laps, 5 AI rivals, checkpoints.',
+    laps: 2,
     racers: 5,
     traffic: 0.35,
   },
@@ -45,6 +45,8 @@ export const QUALITY_AUTO = 'auto';
 export const STORE = {
   settings: 'velocity-rush:settings:v1',
   bests: 'velocity-rush:bests:v1',
+  records: 'velocity-rush:records:v1',
+  pilot: 'velocity-rush:pilot:v1',
   unlocks: 'velocity-rush:unlocks:v1',
 };
 
