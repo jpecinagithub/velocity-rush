@@ -66,10 +66,10 @@ export default function AutotestApp() {
             if (nanHit) break;
             if (frames % 600 === 0) await sleep(0);
           }
-          if (nanHit) throw new Error(`${def.id}: NaN en física`);
-          if (sess.state !== 'finished') throw new Error(`${def.id}: no terminó en 300 s (estado ${sess.state}, vuelta ${sess.player.lap})`);
+          if (nanHit) throw new Error(`${def.id}: NaN in physics`);
+          if (sess.state !== 'finished') throw new Error(`${def.id}: did not finish in 300 s (state ${sess.state}, lap ${sess.player.lap})`);
           const r = sess.results;
-          log(`OK carrera ${def.id}: pos ${r.position}/${r.total}, ${(r.bestLapMs / 1000).toFixed(1)} s mejor vuelta, ${frames} frames`);
+          log(`OK race ${def.id}: pos ${r.position}/${r.total}, ${(r.bestLapMs / 1000).toFixed(1)} s best lap, ${frames} frames`);
           sess.dispose();
         }
 
@@ -83,8 +83,8 @@ export default function AutotestApp() {
           });
           let frames = 0;
           while (sess.state !== 'finished' && frames < 60 * 300) { sess.update(1 / 60); frames++; if (frames % 600 === 0) await sleep(0); }
-          if (sess.state !== 'finished') throw new Error('sprint no terminó');
-          log(`OK sprint: pos ${sess.results.position}, meta a ${(def.sprintFrac * 100).toFixed(0)}% del trazado`);
+          if (sess.state !== 'finished') throw new Error('sprint did not finish');
+          log(`OK sprint: pos ${sess.results.position}, finish at ${(def.sprintFrac * 100).toFixed(0)}% of the route`);
           sess.dispose();
         }
 

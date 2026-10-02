@@ -65,7 +65,7 @@ export function saveRecord(trackId, { name, ms, carId, difficulty }) {
   const list = (Array.isArray(all[trackId]) ? all[trackId] : [])
     .filter((r) => r && Number.isFinite(r.ms));
   const entry = {
-    name: String(name || 'PILOTO').trim().slice(0, 12) || 'PILOTO',
+    name: String(name || 'DRIVER').trim().slice(0, 12) || 'DRIVER',
     ms: Math.round(ms),
     carId: carId || null,
     difficulty: difficulty || null,

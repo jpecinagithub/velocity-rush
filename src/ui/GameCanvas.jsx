@@ -80,7 +80,7 @@ function SessionBridge({ setup, settingsRef, cbs, quality, autoQuality }) {
       session.attach(scene, camera, input);
     } catch (e) {
       console.error(e);
-      if (cbs.onFatal) cbs.onFatal('Error al construir la escena: ' + (e && e.message));
+      if (cbs.onFatal) cbs.onFatal('Error building the scene: ' + (e && e.message));
       return;
     }
     sessionRef.current = session;
@@ -138,13 +138,13 @@ export default function GameCanvas({ setup, settingsRef, cbs }) {
   const autoQuality = !settingsRef.current.graphics || settingsRef.current.graphics === 'auto';
 
   if (!probe) {
-    if (cbs.onFatal) cbs.onFatal('Tu navegador no soporta WebGL, necesario para VELOCITY RUSH.');
+    if (cbs.onFatal) cbs.onFatal('Your browser does not support WebGL, required for VELOCITY RUSH.');
     return (
       <div className="game-wrap">
         <div className="overlay">
           <div className="pause-box">
             <h2>SIN WEBGL</h2>
-            <p>Tu navegador no soporta WebGL, necesario para VELOCITY RUSH.</p>
+            <p>Your browser does not support WebGL, required for VELOCITY RUSH.</p>
           </div>
         </div>
       </div>

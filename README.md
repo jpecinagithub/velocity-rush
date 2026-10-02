@@ -1,72 +1,72 @@
 # VELOCITY RUSH
 
-Juego de carreras arcade 3D para el navegador. 100% original, sin backend:
-todo funciona en el cliente con `npm install` + `npm run dev`.
+3D arcade racing game for the browser. 100% original, no backend:
+everything runs client-side with `npm install` + `npm run dev`.
 
 - **Stack:** Vite, React, JavaScript, Three.js + React Three Fiber, Web Audio API, Gamepad API.
-- **Sin dependencias de pago, sin cuentas, sin placeholders:** menús, física,
-  IA, tráfico, sonido y persistencia son reales y funcionales.
+- **No paid dependencies, no accounts, no placeholders:** menus, physics,
+  AI, traffic, sound and persistence are real and functional.
 
-## Modos de juego
+## Game modes
 
-| Modo | Descripción |
+| Mode | Description |
 |---|---|
-| **Circuito** | 3 vueltas contra 5 rivales IA, con checkpoints, posiciones en vivo y clasificación final. |
-| **Sprint en autopista** | De punto a punto entre tráfico denso, con checkpoints. |
-| **Contrarreloj** | En solitario, 3 vueltas; tu mejor vuelta se guarda en localStorage. |
+| **Circuit** | 2 laps against 5 AI rivals, with checkpoints, live positions and a final standings table. |
+| **Highway sprint** | Point to point through dense traffic, with checkpoints. |
+| **Time attack** | Solo, 3 laps; your best lap is saved in localStorage. |
 
-## Coches (6) y circuitos (3)
+## Cars (6) and tracks (3)
 
-- **Coches:** VORTEX S, FALCON X, DART RS, MAMMOTH GT, SYLPH R y el hipercoche desbloqueable **APEX ONE** (gana cualquier carrera para desbloquearlo).
-- **Circuitos:** AZURE COAST (costa), THUNDER RIDGE (montaña), NEON BAY (ciudad nocturna de neón).
+- **Cars:** VORTEX S, FALCON X, DART RS, MAMMOTH GT, SYLPH R and the unlockable hypercar **APEX ONE** (win any race to unlock it).
+- **Tracks:** AZURE COAST (coast), THUNDER RIDGE (mountain), NEON BAY (neon night city).
 
-## Controles
+## Controls
 
-**Teclado:** W/↑ acelerar · S/↓ frenar · A/D o ←/→ girar · Espacio derrape ·
-Shift nitro · C cámara · R recolocar · P o Esc pausa · Enter confirmar.
+**Keyboard:** W/↑ accelerate · S/↓ brake · A/D or ←/→ steer · Space drift ·
+Shift nitro · C camera · R reset · P or Esc pause · Enter confirm.
 
-**Mando compatible PlayStation:** stick izquierdo girar · R2 acelerar ·
-L2 frenar · ✕ nitro · ▢ derrape · △ cámara · ○ atrás · Options pausa.
-El mando funciona también en los menús (cruz/stick + ✕/○).
+**PlayStation-compatible controller:** left stick steer · R2 accelerate ·
+L2 brake · ✕ nitro · ▢ drift · △ camera · ○ back · Options pause.
+The controller also works in the menus (d-pad/stick + ✕/○).
 
-## Puesta en marcha
+## Getting started
 
 ```bash
 npm install
-npm run dev      # abre http://localhost:5173
+npm run dev      # opens http://localhost:5173
 ```
 
-Otros comandos:
+Other commands:
 
 ```bash
-npm run build    # compila a dist/
-npm test         # 41 pruebas de lógica headless (pistas, física, IA, carreras)
+npm run build    # builds to dist/
+npm test         # headless logic tests (tracks, physics, AI, races)
 ```
 
-## Notas técnicas
+## Technical notes
 
-- Física arcade propia (sin motor externo): derrape controlado, nitro,
-  rebufo (slipstream) con impulso al salir, colisiones coche-coche y con
-  muros, tierra que frena, saltos, y recolocación si te quedas atascado.
-- IA con 3 dificultades (Fácil / Normal / Difícil), 5 pilotos con estilos
-  propios y goma elástica suave (sin teletransporte).
-- Cámara de persecución con 3 posiciones (tecla C), sacudida configurable.
-- Audio 100% sintetizado con Web Audio (motor, derrapes, nitro, cuenta atrás,
-  música de menú y de carrera). Se activa con el primer clic/tecla por la
-  política de autoplay de los navegadores.
-- Calidad gráfica automática (alta/media/baja) según el hardware, con ajuste
-  en marcha si los fps caen. Todo el progreso, ajustes y récords viven en
-  `localStorage` (clave `velocity-rush:*`).
-- Página de autoprueba: abre `?autotest=1` para la batería de validación
-  automática en el navegador.
+- Custom arcade physics (no external engine): controlled drift, nitro,
+  slipstream with exit boost, car-to-car and wall collisions, offroad that
+  slows you down, jumps, and auto-reset if you get stuck.
+- AI with 3 difficulties (Easy / Normal / Hard), 5 drivers with their own
+  styles, and gentle rubber-banding (no teleporting).
+- Chase camera with 3 positions (C key), configurable shake.
+- 100% synthesized audio with Web Audio (engine, skids, nitro, countdown,
+  race music). It unlocks on the first click/keypress due to browser
+  autoplay policies.
+- Automatic graphics quality (high/medium/low) based on hardware, with live
+  adjustment if fps drops. All progress, settings and records live in
+  `localStorage` (`velocity-rush:*` keys).
+- Self-test page: open `?autotest=1` for the automated in-browser
+  validation battery.
 
-## Estructura
+## Structure
 
 ```
 src/
-  game/      motor: pista, física, IA, tráfico, sesión, cámara, partículas, audio
-  data/      coches, circuitos, ajustes (localStorage)
-  ui/        pantallas, HUD, lienzo R3F, navegación por mando/teclado
-  autotest/  batería de validación en el navegador (?autotest=1)
-test/        pruebas de lógica headless (npm test)
+  game/      engine: track, physics, AI, traffic, session, camera, particles, audio
+  data/      cars, tracks, settings (localStorage)
+  ui/        screens, HUD, R3F canvas, gamepad/keyboard navigation
+  autotest/  in-browser validation battery (?autotest=1)
+test/        headless logic tests (npm test)
 ```

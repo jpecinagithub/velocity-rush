@@ -23,12 +23,12 @@ export default function HUD() {
 
       if (posRef.current) posRef.current.textContent = `${h.pos}/${h.total}`;
       if (sprintRef.current) {
-        sprintRef.current.textContent = sess.mode.sprint ? `META ${(h.sprintToGo / 1000).toFixed(1)} km` : `VUELTA ${h.lap}/${h.laps}`;
+        sprintRef.current.textContent = sess.mode.sprint ? `FINISH ${(h.sprintToGo / 1000).toFixed(1)} km` : `LAP ${h.lap}/${h.laps}`;
       }
       if (timeRef.current) timeRef.current.textContent = fmtMs(h.timeMs);
       if (splitsRef.current) {
         const parts = [];
-        if (h.lastLap) parts.push(`ÚLT ${fmtMs(h.lastLap * 1000)}`);
+        if (h.lastLap) parts.push(`LAST ${fmtMs(h.lastLap * 1000)}`);
         if (h.bestLap) parts.push(`MEJOR ${fmtMs(h.bestLap * 1000)}`);
         splitsRef.current.textContent = parts.join(' · ');
       }
@@ -84,7 +84,7 @@ export default function HUD() {
     <div className="hud">
       <div className="hud-tl">
         <div className="pos-big" ref={posRef}>–/–</div>
-        <div className="lap-line" ref={sprintRef}>VUELTA –/–</div>
+        <div className="lap-line" ref={sprintRef}>LAP –/–</div>
       </div>
       <div className="hud-tc">
         <div className="time" ref={timeRef}>0:00.000</div>
@@ -104,7 +104,7 @@ export default function HUD() {
         <div className="speedo"><span ref={speedRef}>0</span><small>km/h</small></div>
         <div className="gear" ref={gearRef}>1</div>
       </div>
-      <div className="hud-warn" ref={warnRef} style={{ display: 'none' }}>¡DIRECCIÓN CONTRARIA!</div>
+      <div className="hud-warn" ref={warnRef} style={{ display: 'none' }}>WRONG WAY!</div>
       <div className="hud-drift" ref={driftRef} style={{ display: 'none' }}>DERAPE</div>
     </div>
   );

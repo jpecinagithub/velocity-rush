@@ -205,8 +205,8 @@ console.log('== sprint (azure) ==');
   ok('records sorted asc', loadRecords('azure').map((r) => r.ms).join(',') === '110000,120000,130000');
   ok('nickname trimmed to 12', saveRecord('azure', { name: '  ABCDEFGHIJKLMN  ', ms: 115000 }) === 1
     && loadRecords('azure')[1].name === 'ABCDEFGHIJKL');
-  ok('empty nickname defaults to PILOTO', saveRecord('azure', { name: '   ', ms: 116000 }) === 2
-    && loadRecords('azure')[2].name === 'PILOTO');
+  ok('empty nickname defaults to DRIVER', saveRecord('azure', { name: '   ', ms: 116000 }) === 2
+    && loadRecords('azure')[2].name === 'DRIVER');
   // fill to the cap, then check trimming and qualification
   for (let i = 0; i < MAX_RECORDS; i++) saveRecord('ridge', { name: 'P' + i, ms: 100000 + i * 1000 });
   ok('records capped at 10', loadRecords('ridge').length === MAX_RECORDS);

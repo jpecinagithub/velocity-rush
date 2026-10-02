@@ -158,7 +158,7 @@ export default function App() {
               <div className="pause-box">
                 <h2>ERROR</h2>
                 <p>{fatal}</p>
-                <button className="btn primary" onClick={quitToMenu}>Volver al menú</button>
+                <button className="btn primary" onClick={quitToMenu}>Back to menu</button>
               </div>
             </div>
           )}
