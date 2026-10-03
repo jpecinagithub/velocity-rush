@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import GameCanvas from './ui/GameCanvas.jsx';
 import HUD from './ui/HUD.jsx';
 import {
-  MainMenu, SetupFlow, ControlsScreen, SettingsScreen, HelpScreen,
+  MainMenu, SetupFlow, ControlsScreen, SettingsScreen, HelpScreen, AuthorScreen,
   PauseOverlay, ResultsScreen, CountdownOverlay, MessageFeed,
 } from './ui/screens.jsx';
 import { getInput } from './ui/inputSingleton.js';
@@ -118,6 +118,7 @@ export default function App() {
           onControls={() => setScreen('controls')}
           onSettings={() => setScreen('settings')}
           onHelp={() => setScreen('help')}
+          onAuthor={() => setScreen('author')}
         />
       )}
       {screen === 'setup' && (
@@ -131,6 +132,7 @@ export default function App() {
         <SettingsScreen settings={settings} onChange={updateSettings} onBack={() => setScreen('menu')} />
       )}
       {screen === 'help' && <HelpScreen onBack={() => setScreen('menu')} />}
+      {screen === 'author' && <AuthorScreen onBack={() => setScreen('menu')} />}
 
       {screen === 'game' && race && (
         <div className="game-wrap">

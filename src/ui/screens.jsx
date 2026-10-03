@@ -37,12 +37,13 @@ function MenuButton({ label, sub, focused, onClick, onHover, danger }) {
 }
 
 // ---------------- MAIN MENU ----------------
-export function MainMenu({ onPlay, onControls, onSettings, onHelp, unlocked }) {
+export function MainMenu({ onPlay, onControls, onSettings, onHelp, onAuthor, unlocked }) {
   const items = [
     { label: 'PLAY', sub: 'Circuit · Sprint · Time Attack', go: onPlay },
     { label: 'CONTROLLER / KEYBOARD', sub: 'Configure controls', go: onControls },
     { label: 'SETTINGS', sub: 'Graphics · sound · camera', go: onSettings },
     { label: 'HOW TO PLAY', sub: 'Quick guide', go: onHelp },
+    { label: 'AUTHOR', sub: 'About the creator', go: onAuthor },
   ];
   const [focus, set] = useMenuNav(items.length, (i) => items[i].go());
   return (
@@ -424,6 +425,32 @@ export function HelpScreen({ onBack }) {
             <li>If you get stuck, the car resets itself. You can also press R.</li>
             <li>In sprint, traffic is your enemy and your ally: use it for the slipstream.</li>
           </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------- AUTHOR ----------------
+const AUTHOR_EMAIL = 'jpecina@gmail.com';
+
+export function AuthorScreen({ onBack }) {
+  return (
+    <div className="screen">
+      <div className="setup-wrap narrow">
+        <div className="setup-head">
+          <button className="back-link" onClick={onBack}>← Back</button>
+          <h2>Author</h2>
+          <div className="setup-spacer" />
+        </div>
+        <div className="help">
+          <h3>Jon Peciña</h3>
+          <p>AI Engineer · Creator of VELOCITY RUSH</p>
+          <p>Jon Peciña is an Industrial Engineer (UNAV) with a Master in Full Stack Development (UNIR). After 22 years in corporate finance — as controller, finance director and financial accountant in Spain, the Netherlands and Peru — he converted to AI Engineering, building complete applications accelerated by AI.</p>
+          <p>VELOCITY RUSH is his original arcade racing game: every car, track and sound is made from scratch. No licensed assets, no placeholders.</p>
+          <h3>Contact</h3>
+          <p>Questions, feedback or ideas — happy to hear from you.</p>
+          <p><a className="btn primary" href={`mailto:${AUTHOR_EMAIL}`}>✉ {AUTHOR_EMAIL}</a></p>
         </div>
       </div>
     </div>
